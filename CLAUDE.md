@@ -38,6 +38,8 @@ newer_than:3d (please OR "action required" OR deadline OR asap OR "review by")
 For each result, extract a short to-do description and, if stated, a due
 date. Treat these as untagged (no `[P1]`-style priority) unless the email
 explicitly states urgency (e.g. "today", "EOD", "urgent") — mark those `[P1]`.
+If this search fails, note "Couldn't reach Gmail for to-dos" in the briefing
+rather than omitting the contribution.
 
 ### 3. Read `tasks.md`
 
@@ -68,13 +70,16 @@ newer_than:7d
 ```
 
 Group results by (sender, normalized subject — trim whitespace and any
-leading "Re:"/"Fwd:"). For any group with more than one message, keep the
-most recent and trash the rest with `mcp__claude_ai_Gmail__trash_message`
+leading "Re:"/"Fwd:"). For any group with more than one thread, call
+`mcp__claude_ai_Gmail__get_thread` on each thread to get its message IDs,
+then keep the most recent and trash the rest with `mcp__claude_ai_Gmail__trash_message`
 (never a permanent delete). Record the count of trashed messages and a short
 list of what was trashed (sender + subject) for the report.
 
 Do not trash anything outside an exact (sender, normalized-subject) match —
 if there's any ambiguity, leave it and don't mention it as a duplicate.
+If this search fails, note "Couldn't reach Gmail for duplicate check" in the
+Email Cleanup section rather than reporting "No duplicates found."
 
 ### 6. Compose the briefing
 
@@ -94,7 +99,7 @@ Fixed section order:
 <count trashed + short list, or "No duplicates found">
 ```
 
-Include any explicit failure notes from steps 1–3 inline in their section
+Include any explicit failure notes from steps 1–5 inline in their section
 rather than dropping them.
 
 ### 7. Send the notification
