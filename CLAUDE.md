@@ -3,9 +3,10 @@
 ## Purpose
 
 Every morning at 8:00 AM, produce a briefing covering priorities, meetings,
-to-dos, and email cleanup. Delivery is a short push notification headline
-plus the full briefing as the run's final response (see step 7). This runs
-automatically via a scheduled routine — no manual start needed.
+to-dos, and email cleanup. Delivery is a short push notification headline,
+plus the full briefing sent as an email and included as the run's final
+response (see step 7). This runs automatically via a scheduled routine — no
+manual start needed.
 
 ## Trigger
 
@@ -166,7 +167,7 @@ rather than dropping them.
 
 ### 7. Deliver
 
-The briefing has two parts, and they are **not** the same text.
+The briefing has three parts, and they are **not** the same text.
 
 **a) The push notification — a short headline only.** The `PushNotification`
 tool requires a single-line message, no Markdown, under 200 characters;
@@ -183,11 +184,22 @@ characters; if any failure notes exist, compress them into the same line
 (e.g. `... , Gmail unreachable for meetings`) rather than dropping them.
 Send that headline via `PushNotification`.
 
-**b) The full briefing is the run's final response.** Output the complete
-composed briefing from step 6 — all four sections, in order, with any
-failure notes — as your final message for the run. That is where the full
-content lives; do not try to squeeze it into the notification.
+**b) The full briefing by email.** Send the complete composed briefing from
+step 6 — all four sections, in order, with any failure notes — as an email
+via `mcp__claude_ai_Gmail__send_message`:
+- To: `elia.barume@zawadie.com`
+- Subject: `Daily Briefing — <today's date>`
+- Body: the full step 6 briefing text, unabridged.
+
+If sending fails, do not retry silently — note the failure explicitly in the
+final response (part c) so it isn't lost.
+
+**c) The full briefing is also the run's final response.** Output the
+complete composed briefing from step 6 as your final message for the run,
+regardless of whether the email in (b) succeeded — this is the fallback the
+user can always read even if email delivery failed.
 
 If `PushNotification` reports that it did not send (for example because the
 user is at a terminal rather than on mobile), say so explicitly in the final
-response — do not silently assume delivery succeeded.
+response — do not silently assume delivery succeeded. Same for the email in
+(b): confirm success or failure, don't assume.
