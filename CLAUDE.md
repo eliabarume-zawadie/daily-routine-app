@@ -33,7 +33,28 @@ entirely.
 
 ### 1. Gather meetings
 
-Use `mcp__claude_ai_Gmail__search_threads` with query:
+Two sources, merged. Google Calendar is authoritative; Gmail invite emails
+only fill in anything Calendar doesn't have yet (e.g. an invite that arrived
+but hasn't been added to Calendar).
+
+**a) Google Calendar (primary).** Call `mcp__claude_ai_Google_Calendar__list_events`
+with:
+- `startTime`: today's date in Africa/Johannesburg time, `<YYYY-MM-DD>T00:00:00+02:00`
+- `endTime`: same date, `<YYYY-MM-DD>T23:59:59+02:00`
+- `orderBy`: `startTime`
+
+(Leave `calendarId` unset — defaults to the primary calendar. Africa/Johannesburg
+is UTC+2 year-round, no DST, so the `+02:00` offset is always correct.)
+
+This returns real events with actual start/end times for today — use this
+list as the base.
+
+If this call fails, note "Couldn't reach Google Calendar for meetings" in
+the briefing and fall back to using only the Gmail check below for this run,
+rather than omitting the section.
+
+**b) Gmail invite emails (supplementary).** Use `mcp__claude_ai_Gmail__search_threads`
+with query:
 
 ```
 filename:ics newer_than:30d
@@ -49,11 +70,20 @@ The search results only give subject/sender/snippet/email-date — they do
 call `mcp__claude_ai_Gmail__get_thread` with a plain-text/readable format and
 read the actual event date out of the invite body/content. Do not try to
 infer the event date from the snippet alone. Keep only events whose event
-date is today, and sort those by start time.
+date is today.
 
-If none are found, or the search fails, keep an explicit note for the
-briefing ("No meetings found today" / "Couldn't reach Gmail for meetings")
-instead of omitting the section.
+If this search fails, note "Couldn't reach Gmail for meeting invites" —
+but only if the Calendar call in (a) also failed or found nothing; don't let
+a Gmail failure overshadow a successful Calendar result.
+
+**c) Merge.** Add today's-date Gmail invites to the Calendar list only if
+they don't already match a Calendar event (same or near-identical title,
+and either the same day or an overlapping/adjacent time) — a Calendar event
+created from an invite is the same meeting, not a second one. Sort the
+merged list by start time.
+
+If both sources come back empty (or both fail), keep an explicit note for
+the briefing ("No meetings found today") instead of omitting the section.
 
 ### 2. Gather email-derived to-dos
 
