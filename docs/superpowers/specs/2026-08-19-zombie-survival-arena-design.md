@@ -29,8 +29,8 @@ Four choices were made up front; everything below follows from them.
 4. **Keep it as simple as the PRD asks.** PRD section 8 says not to add
    complexity before the core is stable, and section 6 says to avoid
    dependencies. So: seven source modules, no build step, no package manager,
-   no test framework, and no file that does not earn its place. Ten files
-   total, including the HTML and CSS.
+   no test framework, and no file that does not earn its place. Nine files of
+   game — the HTML, the CSS, and seven modules.
 
 ## Architecture
 
@@ -94,8 +94,9 @@ Game app/
     ui.js        DOM HUD, the four screens, high-score persistence
 ```
 
-Ten files. No `package.json`, no build step, no test directory — nothing that
-exists only to support tooling.
+Nine files of game, plus the PRD and the folder's CLAUDE.md. No
+`package.json`, no build step, no test directory — nothing that exists only to
+support tooling.
 
 ### What lives where
 
