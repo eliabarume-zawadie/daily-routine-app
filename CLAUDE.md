@@ -85,9 +85,11 @@ merged list by start time.
 If both sources come back empty (or both fail), keep an explicit note for
 the briefing ("No meetings found today") instead of omitting the section.
 
-### 2. Gather email-derived to-dos
+### 2. Gather to-dos from email and recent meetings
 
-Use `mcp__claude_ai_Gmail__search_threads` with query:
+Two sources, merged.
+
+**a) Email-derived to-dos.** Use `mcp__claude_ai_Gmail__search_threads` with query:
 
 ```
 newer_than:3d (please OR "action required" OR deadline OR asap OR "review by")
@@ -98,6 +100,27 @@ date. Treat these as untagged (no `[P1]`-style priority) unless the email
 explicitly states urgency (e.g. "today", "EOD", "urgent") — mark those `[P1]`.
 If this search fails, note "Couldn't reach Gmail for to-dos" in the briefing
 rather than omitting the contribution.
+
+**b) Meeting action items (monday.com notetaker).** Call
+`mcp__claude_ai_monday_com__explore_meetings` with `access: OWN` and
+`start_time_from` set to 2 days before today (UTC ISO 8601) — this catches
+yesterday's and today's-so-far meetings even allowing for timezone slop.
+This is a listing call only; it does not return action items itself.
+
+For each meeting returned, call `mcp__claude_ai_monday_com__get_meetings_content`
+with its id, `include_action_items: true`. For each action item returned,
+add a to-do: `<action item text> (from meeting: <meeting title>, <date>)`.
+Treat as untagged unless the action item text itself states explicit
+urgency (e.g. "today", "ASAP", "urgent") — mark those `[P1]`.
+
+A meeting with no completed recording, or one you don't have access to,
+comes back in `missing_ids` or `content_omitted_ids` — skip it silently,
+that's not a failure. Only note "Couldn't reach monday.com for meeting
+action items" if the calls themselves error out.
+
+**c) Merge.** Combine both sources into one to-do candidate pool for step 4.
+If a meeting action item and an email to-do clearly describe the same task,
+keep one rather than listing it twice.
 
 ### 3. Read `tasks.md`
 
@@ -121,14 +144,15 @@ Then parse only the surviving real-content lines:
 If every line is skipped, treat `tasks.md` as having no saved to-dos.
 
 If `tasks.md` does not exist, note "tasks.md not found — skipping saved
-to-dos" in the briefing and continue with email-derived to-dos only.
+to-dos" in the briefing and continue with the step 2 to-dos only.
 
 ### 4. Merge and prioritize
 
-Combine tasks.md items and email-derived to-dos into one list. Order:
+Combine tasks.md items with the step 2 to-do pool (email + meeting action
+items) into one list. Order:
 1. `[P1]` items and anything due today or overdue.
 2. `[P2]` items.
-3. Untagged items and email-derived items without explicit urgency.
+3. Untagged items and step 2 items without explicit urgency.
 4. `[P3]` items.
 
 Within each tier, sort by due date (soonest first), then by discovery order.
