@@ -218,8 +218,10 @@ pauses, `1`/`2`/`3` picks an upgrade, `R` restarts from game over.
 
 - Fixed timestep with a step cap, as above.
 - Auto-pause on window blur, so returning to the tab is never a free death.
-- Bullets and particles are reused from fixed-size pools, avoiding mid-fight
-  garbage-collection stutter.
+- Particles come from a fixed-size ring buffer, so heavy effect churn cannot
+  trigger mid-fight garbage-collection stutter. Other entities use flat arrays
+  with swap-and-pop removal; their counts are low enough that a pool
+  abstraction would be complexity without benefit.
 - `localStorage` access wrapped in try/catch — it throws outright in some
   private-browsing modes. A failure silently disables high-score persistence
   rather than breaking the game.
