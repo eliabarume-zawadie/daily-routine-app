@@ -53,6 +53,11 @@ export const SEPARATION_WEIGHT = 1.6;   // how hard zombies push each other apar
 export const CONTACT_COOLDOWN = 0.6;    // seconds between hits from ONE zombie
 export const HIT_FLASH = 0.12;          // seconds a zombie flashes after a hit
 
+// Zombies are solid: the player cannot walk through them, so a closed ring of
+// zombies traps you. Bites need a little reach beyond the blocking distance —
+// once bodies are touching exactly, a strict overlap test would never fire.
+export const CONTACT_REACH = 4;
+
 // --- Waves ------------------------------------------------------------------
 
 export const WAVE = {
@@ -66,6 +71,18 @@ export const WAVE = {
   speedMax: 1.5,
   breather: 3,          // seconds of calm between waves
   spawnMargin: 60,      // how far outside the arena zombies appear
+};
+
+// Difficulty rises with the player's LEVEL as well as the wave number, so
+// stacking upgrades raises the stakes instead of trivialising the run. These
+// multiply with the wave curves above — a high-level player deep into a run
+// faces both.
+export const LEVEL_SCALING = {
+  hpPerLevel: 0.10,          // +10% zombie health per player level
+  speedPerLevel: 0.012,
+  budgetPerLevel: 1.5,       // extra zombies per wave, per player level
+  intervalPerLevel: 0.02,    // they also arrive faster
+  wavesPerLevel: 0.5,        // and tougher types unlock sooner
 };
 
 // --- XP and levelling -------------------------------------------------------

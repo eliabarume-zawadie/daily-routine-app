@@ -2,8 +2,8 @@
 // and progression. This is the module that owns the run.
 
 import {
-  STEP, MAX_STEPS, MAX_FRAME_DELTA, ARENA, COLORS, WEAPON, WAVE, XP, SHAKE,
-  UPGRADES,
+  STEP, MAX_STEPS, MAX_FRAME_DELTA, ARENA, COLORS, PLAYER, WEAPON, WAVE, XP,
+  SHAKE, UPGRADES,
 } from './config.js';
 // Note: nothing here forces `input.firing` off on a state change. The mouse
 // button is the browser's state to report, and clearing it here desynced the
@@ -89,7 +89,7 @@ function startRun() {
 
 function beginWave(n) {
   game.wave = n;
-  game.toSpawn = waves.budget(n);
+  game.toSpawn = waves.budget(n, game.level);
   game.spawnTimer = 0;
   showBanner(`WAVE ${n}`);
 }
@@ -102,7 +102,7 @@ function endRun() {
 // --- Spawning ---------------------------------------------------------------
 
 function spawnZombie() {
-  const type = waves.pickType(game.wave);
+  const type = waves.pickType(game.wave, game.level);
   const m = WAVE.spawnMargin;
   let x;
   let y;
@@ -115,7 +115,9 @@ function spawnZombie() {
   }
 
   game.zombies.push(createZombie(
-    type, x, y, waves.hpScale(game.wave), waves.speedScale(game.wave),
+    type, x, y,
+    waves.hpScale(game.wave, game.level),
+    waves.speedScale(game.wave, game.level),
   ));
 }
 
@@ -131,7 +133,7 @@ function updateWaves(dt) {
     if (game.spawnTimer <= 0) {
       spawnZombie();
       game.toSpawn--;
-      game.spawnTimer = waves.interval(game.wave);
+      game.spawnTimer = waves.interval(game.wave, game.level);
     }
   } else if (game.zombies.length === 0) {
     game.breather = WAVE.breather;
@@ -274,6 +276,44 @@ function swapPop(arr, i) {
   arr.pop();
 }
 
+function overlapsZombie(x, y) {
+  for (let i = 0; i < game.zombies.length; i++) {
+    const z = game.zombies[i];
+    // A hair of tolerance, so bodies resting in contact don't read as overlap.
+    const r = z.radius + PLAYER.radius - 0.5;
+    const dx = x - z.x;
+    const dy = y - z.y;
+    if (dx * dx + dy * dy < r * r) return true;
+  }
+  return false;
+}
+
+/**
+ * Zombies are solid, so the player cannot walk through them — close the ring
+ * and there is nowhere left to go until they shoot a gap in it.
+ *
+ * The two axes are resolved separately, which is what lets the player slide
+ * along a wall of bodies instead of sticking to it: blocked horizontally, they
+ * can still move vertically. When both axes are blocked, they are pinned.
+ *
+ * Note this only ever cancels the player's OWN movement; it never displaces
+ * them. Displacement would let a closing ring squeeze the player out.
+ */
+function resolvePlayerMovement(p, prevX, prevY) {
+  const targetX = p.x;
+  const targetY = p.y;
+
+  // Already inside a body (a zombie spawned on top, say) — don't lock them in
+  // place fighting geometry they cannot escape.
+  if (!overlapsZombie(prevX, prevY)) {
+    p.x = overlapsZombie(targetX, prevY) ? prevX : targetX;
+    p.y = overlapsZombie(p.x, targetY) ? prevY : targetY;
+  }
+
+  p.x = Math.max(PLAYER.radius, Math.min(ARENA.w - PLAYER.radius, p.x));
+  p.y = Math.max(PLAYER.radius, Math.min(ARENA.h - PLAYER.radius, p.y));
+}
+
 // --- Update -----------------------------------------------------------------
 
 function update(dt) {
@@ -287,7 +327,10 @@ function update(dt) {
   if (game.state !== STATE.PLAYING) return;
 
   const p = game.player;
+  const prevX = p.x;
+  const prevY = p.y;
   updatePlayer(p, dt);
+  resolvePlayerMovement(p, prevX, prevY);
 
   if (tryFire(p)) {
     const m = muzzlePoint(p);

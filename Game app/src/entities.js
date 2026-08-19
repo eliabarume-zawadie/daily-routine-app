@@ -3,7 +3,7 @@
 
 import {
   ARENA, PLAYER, WEAPON, ZOMBIES, SEPARATION_WEIGHT, CONTACT_COOLDOWN,
-  HIT_FLASH, XP, MAX_PARTICLES,
+  CONTACT_REACH, HIT_FLASH, XP, MAX_PARTICLES,
 } from './config.js';
 import { input, moveVector } from './input.js';
 
@@ -151,6 +151,24 @@ export function updateZombie(z, dt, player, zombies) {
   z.y += vy * z.speed * dt;
   z.phase += dt * (z.speed / 26);
   z.facing = Math.atan2(dy, dx);
+
+  // Zombies are solid: they stop at the player's edge rather than walking
+  // through. Clamping the ZOMBIE here (never the player) is what makes an
+  // encirclement possible — pushing the player out of overlaps instead would
+  // squeeze them out of a closing ring like a pip.
+  const rp = z.radius + PLAYER.radius;
+  let px = z.x - player.x;
+  let py = z.y - player.y;
+  let pd = Math.hypot(px, py);
+  if (pd < rp) {
+    if (pd < 0.0001) {
+      px = Math.cos(z.phase);
+      py = Math.sin(z.phase);
+      pd = 1;
+    }
+    z.x = player.x + (px / pd) * rp;
+    z.y = player.y + (py / pd) * rp;
+  }
 }
 
 export function hitZombie(z, damage) {
@@ -159,10 +177,17 @@ export function hitZombie(z, damage) {
   return z.hp <= 0;
 }
 
-/** True if this zombie is touching the player and its own cooldown has expired. */
+/**
+ * True if this zombie is touching the player and its own cooldown has expired.
+ *
+ * The reach matters: because zombies are solid, the collision pass parks their
+ * bodies at exactly `z.radius + PLAYER.radius`. A strict overlap test would sit
+ * permanently on that boundary and, depending on floating-point rounding, could
+ * stop registering bites altogether.
+ */
 export function zombieCanBite(z, player) {
   if (z.attackCd > 0) return false;
-  const r = z.radius + PLAYER.radius;
+  const r = z.radius + PLAYER.radius + CONTACT_REACH;
   const dx = z.x - player.x;
   const dy = z.y - player.y;
   if (dx * dx + dy * dy > r * r) return false;

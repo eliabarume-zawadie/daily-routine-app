@@ -145,21 +145,53 @@ one shape. Contact damage applies on touch with a per-zombie 0.6 s cooldown —
 per-attacker rather than global invulnerability frames, so being surrounded is
 genuinely more dangerous than being chased by one.
 
+### Solid bodies
+
+Zombies and the player cannot occupy the same space, and a closed ring of
+zombies pins the player in place until they shoot a gap in it.
+
+The resolution is asymmetric, and the asymmetry is the whole mechanic:
+
+- **Zombies clamp themselves** to the player's edge, stopping rather than
+  walking through.
+- **The player's own movement is cancelled**, per axis, when it would enter a
+  body. Resolving X and Y separately lets them slide along a wall of bodies
+  rather than sticking to it; when both axes are blocked they are pinned.
+
+The player is never *displaced* by this. An earlier attempt pushed the player
+out of overlaps instead, which made encirclement impossible — a closing ring
+squeezed the player out like a pip, and measurement showed only ever two
+zombies in contact across a 280° gap. Clamping the zombie instead produces a
+full shell: sixteen zombies in contact with a largest gap of 23°.
+
+Bites are tested at `radius + CONTACT_REACH` rather than strict overlap.
+Because bodies now rest at exactly the contact distance, a strict test sits
+permanently on the boundary and could stop registering hits altogether.
+
 ### Waves
 
-- Spawn budget: `8 + 5 × (wave − 1)`
-- Spawn interval: `max(0.25, 1.2 − 0.06 × (wave − 1))` seconds
-- HP scaling: `1 + 0.06 × (wave − 1)`
-- Speed scaling: `min(1.5, 1 + 0.02 × (wave − 1))`
+Two pressures compound: surviving longer (wave) and growing stronger (player
+level). Upgrades therefore keep pace with the horde instead of outrunning it —
+the game gets harder in both directions, and every curve is monotonic in each.
 
-Spawn type is a weighted random draw, with the weights growing by wave so the
+- Spawn budget: `round(8 + 5 × (wave − 1) + 1.5 × (level − 1))`
+- Spawn interval: `max(0.25, 1.2 − 0.06 × (wave − 1) − 0.02 × (level − 1))` s
+- HP scaling: `(1 + 0.06 × (wave − 1)) × (1 + 0.10 × (level − 1))`
+- Speed scaling: `min(1.5, (1 + 0.02 × (wave − 1)) × (1 + 0.012 × (level − 1)))`
+
+Type unlocks key off a **threat** value, `wave + floor(0.5 × (level − 1))`,
+rather than the wave number alone, so a fast-levelling player meets runners and
+brutes sooner. All level coefficients live in `LEVEL_SCALING` in `config.js`;
+zeroing them reverts to pure wave-based difficulty.
+
+Spawn type is a weighted random draw against the threat value `n` above, so the
 mix shifts from all Walkers toward a Runner-and-Brute-heavy horde:
 
-| Type   | Weight                                                     |
-|--------|------------------------------------------------------------|
-| Walker | `10`                                                       |
-| Runner | `0` before wave 3, else `min(10, 2 + (wave − 3))`          |
-| Brute  | `0` before wave 6, else `min(6, 1 + floor((wave − 6) / 2))` |
+| Type   | Weight                                                  |
+|--------|---------------------------------------------------------|
+| Walker | `10`                                                    |
+| Runner | `0` for `n < 3`, else `min(10, 2 + (n − 3))`            |
+| Brute  | `0` for `n < 6`, else `min(6, 1 + floor((n − 6) / 2))`  |
 
 A wave clears when its budget is spent and no zombies remain alive. A 3 s
 breather and a "WAVE N" banner follow before the next wave begins.

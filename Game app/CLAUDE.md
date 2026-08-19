@@ -65,6 +65,16 @@ src/
 - **The state machine gates behavior.** `MENU`, `PLAYING`, `LEVEL_UP`,
   `PAUSED`, `GAME_OVER`. Route on state rather than adding boolean flags like
   `isPaused` — flags are how contradictory states get created.
+- **Difficulty keys off both wave and player level.** `waves.js` takes
+  `(wave, level)` and every curve is monotonic in each, so no upgrade can ever
+  make the game easier. Coefficients live in `LEVEL_SCALING`; zero them to
+  revert to pure wave-based difficulty.
+- **Solid bodies are asymmetric, deliberately.** Zombies clamp themselves to
+  the player's edge; the player's own movement is cancelled per axis. Never
+  "fix" this by pushing the player out of overlaps instead — that makes
+  encirclement impossible, because a closing ring squeezes the player straight
+  out of it. Bites use `CONTACT_REACH` past the contact distance, since bodies
+  now rest exactly on that boundary.
 - **No dependencies, no build step, no tooling files.** PRD section 6. If
   something seems to need a package, raise it before adding one.
 
