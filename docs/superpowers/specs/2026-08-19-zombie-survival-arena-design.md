@@ -21,8 +21,13 @@ Four choices were made up front; everything below follows from them.
    checkpoint at each stage boundary.
 2. **Modular ES modules, served over HTTP.** Real `import`/`export` modules in
    `src/`. Browsers block ES modules over `file://`, so the game runs from a
-   local static server (`python -m http.server 8000`). This satisfies the PRD's
-   "modular and maintainable" requirement at the cost of one command to launch.
+   local static server: `node serve.mjs`. This satisfies the PRD's "modular and
+   maintainable" requirement at the cost of one command to launch.
+
+   `serve.mjs` uses only Node's standard library and adds no dependency. It
+   exists because `python -m http.server` cannot be relied on — on Windows
+   `python` is frequently a Microsoft Store alias rather than an interpreter,
+   and the documented command fails outright.
 3. **Neon noir art direction.** Near-black arena, cyan player, sickly-green
    zombies, hot-white tracers, magenta XP orbs, glow via canvas `shadowBlur`.
    Drawn entirely procedurally — no image assets, no external dependencies.
@@ -84,6 +89,7 @@ Game app/
   PRD.md         the product requirements
   index.html     canvas + DOM UI overlay
   styles.css
+  serve.mjs      dependency-free static server, Node stdlib only
   src/
     config.js    every tunable: stats, curves, palette, upgrade definitions
     input.js     keyboard state + canvas-relative mouse position
@@ -94,7 +100,7 @@ Game app/
     ui.js        DOM HUD, the four screens, high-score persistence
 ```
 
-Nine files of game, plus the PRD and the folder's CLAUDE.md. No
+Nine files of game plus `serve.mjs`, and the PRD and the folder's CLAUDE.md. No
 `package.json`, no build step, no test directory — nothing that exists only to
 support tooling.
 

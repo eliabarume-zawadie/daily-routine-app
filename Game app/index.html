@@ -1,0 +1,90 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Zombie Survival Arena</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div id="stage">
+    <canvas id="game"></canvas>
+
+    <!-- HUD -->
+    <div id="hud" class="hidden">
+      <div class="hud-left">
+        <div class="bar health">
+          <div id="health-fill" class="bar-fill"></div>
+          <span id="health-text" class="bar-label">100 / 100</span>
+        </div>
+        <div class="bar xp">
+          <div id="xp-fill" class="bar-fill"></div>
+          <span class="bar-label">LVL <span id="level">1</span></span>
+        </div>
+        <div id="weapon-stats" class="weapon">DMG 25 · RPS 5.0 · SPD 260</div>
+      </div>
+
+      <div class="hud-right">
+        <div class="stat"><span class="stat-label">SCORE</span><span id="score">0</span></div>
+        <div class="stat"><span class="stat-label">WAVE</span><span id="wave">1</span></div>
+        <div class="stat"><span class="stat-label">ZOMBIES</span><span id="zombies-left">0</span></div>
+      </div>
+    </div>
+
+    <div id="banner"></div>
+
+    <!-- Start -->
+    <section id="screen-start" class="screen">
+      <div class="panel">
+        <h1>ZOMBIE<span>SURVIVAL</span>ARENA</h1>
+        <p class="tagline">Survive as long as you can.</p>
+        <ul class="controls">
+          <li><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> <span>Move</span></li>
+          <li><kbd>Mouse</kbd> <span>Aim</span></li>
+          <li><kbd>Click</kbd> <span>Shoot (hold to keep firing)</span></li>
+          <li><kbd>1</kbd><kbd>2</kbd><kbd>3</kbd> <span>Pick an upgrade</span></li>
+          <li><kbd>P</kbd><kbd>Esc</kbd> <span>Pause</span></li>
+        </ul>
+        <p class="high">High score <strong id="start-high">0</strong></p>
+        <button id="btn-start" type="button" class="primary">START</button>
+        <p class="hint">or press any key</p>
+      </div>
+    </section>
+
+    <!-- Pause -->
+    <section id="screen-pause" class="screen hidden">
+      <div class="panel">
+        <h2>PAUSED</h2>
+        <button id="btn-resume" type="button" class="primary">RESUME</button>
+        <p class="hint">or press <kbd>P</kbd></p>
+      </div>
+    </section>
+
+    <!-- Level up -->
+    <section id="screen-levelup" class="screen hidden">
+      <div class="panel wide">
+        <h2 class="levelup-title">LEVEL UP</h2>
+        <p class="tagline">Choose an upgrade</p>
+        <div id="upgrade-cards"></div>
+      </div>
+    </section>
+
+    <!-- Game over -->
+    <section id="screen-gameover" class="screen hidden">
+      <div class="panel">
+        <h2 class="dead">YOU DIED</h2>
+        <p id="new-record" class="record hidden">NEW HIGH SCORE</p>
+        <dl class="results">
+          <div><dt>Score</dt><dd id="final-score">0</dd></div>
+          <div><dt>Wave</dt><dd id="final-wave">1</dd></div>
+          <div><dt>Best</dt><dd id="final-high">0</dd></div>
+        </dl>
+        <button id="btn-restart" type="button" class="primary">PLAY AGAIN</button>
+        <p class="hint">or press <kbd>R</kbd></p>
+      </div>
+    </section>
+  </div>
+
+  <script type="module" src="src/game.js"></script>
+</body>
+</html>

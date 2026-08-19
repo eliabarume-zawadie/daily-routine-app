@@ -23,17 +23,24 @@ ES modules are blocked over `file://`, so double-clicking `index.html` will not
 work. Serve the folder:
 
 ```
-python -m http.server 8000
+node serve.mjs
 ```
 
-Then open `http://localhost:8000`. There is no build step and no package
-manager — edit a file, refresh the browser.
+Then open `http://localhost:8000`. Pass a port to use a different one
+(`node serve.mjs 9000`). There is no build step and no package manager — edit a
+file, refresh the browser.
+
+`serve.mjs` is a dependency-free static server using only Node's standard
+library. It exists because `python -m http.server` is not reliably available:
+on Windows, `python` is often a Store alias rather than a real install. Any
+other static server works too.
 
 ## Structure
 
 ```
 index.html     canvas + DOM UI overlay
 styles.css
+serve.mjs      dependency-free static server (node serve.mjs)
 src/
   config.js    every tunable: stats, curves, palette, upgrade definitions
   input.js     keyboard state + canvas-relative mouse position

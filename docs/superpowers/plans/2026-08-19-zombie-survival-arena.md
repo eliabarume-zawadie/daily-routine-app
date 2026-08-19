@@ -16,7 +16,7 @@ dependencies, no build step, no package manager, no test framework.
 ## Global Constraints
 
 - No external dependencies, no build step, no `package.json`, no test framework.
-- Nine game files only: `index.html`, `styles.css`, and seven `src/*.js`
+- Ten files only: `index.html`, `styles.css`, `serve.mjs`, and seven `src/*.js`
   modules. Do not add files beyond these.
 - Every tunable number lives in `src/config.js`. No magic numbers in logic.
 - `render.js` is the only module touching the canvas context; `ui.js` is the
@@ -24,7 +24,7 @@ dependencies, no build step, no package manager, no test framework.
 - Simulation steps at a fixed `1/60` s, capped at 5 steps per frame.
 - Entities are plain objects in flat arrays, removed by swap-and-pop.
 - Arena is a fixed `1280×720` logical space, uniformly scaled with letterboxing.
-- Run with `python -m http.server 8000` from `Game app/`; never `file://`.
+- Run with `node serve.mjs` from `Game app/`; never `file://`.
 - Verification is the browser smoke checklist — there is no automated suite.
   Every task ends by loading the page and confirming a clean console.
 
