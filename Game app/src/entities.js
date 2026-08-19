@@ -178,21 +178,32 @@ export function hitZombie(z, damage) {
 }
 
 /**
- * True if this zombie is touching the player and its own cooldown has expired.
+ * True if this zombie is close enough to bite. Range only — it deliberately
+ * ignores the attack cooldown.
  *
- * The reach matters: because zombies are solid, the collision pass parks their
- * bodies at exactly `z.radius + PLAYER.radius`. A strict overlap test would sit
- * permanently on that boundary and, depending on floating-point rounding, could
- * stop registering bites altogether.
+ * The caller picks the closest few zombies as the attackers and only then
+ * checks their cooldowns. Filtering by cooldown here instead would let the
+ * whole ring take turns through the attacker cap: a zombie mid-cooldown would
+ * yield its slot to the next one back, and a crowd would deliver every bite
+ * anyway, just spread over more frames.
+ *
+ * It is also side-effect free, so a zombie that is never chosen does not
+ * silently burn its cooldown.
+ *
+ * The reach matters too. Because zombies are solid, the movement pass parks
+ * their bodies at exactly `z.radius + PLAYER.radius`. A strict overlap test
+ * would sit permanently on that boundary and, depending on floating-point
+ * rounding, could stop registering bites altogether.
  */
-export function zombieCanBite(z, player) {
-  if (z.attackCd > 0) return false;
+export function zombieInBiteRange(z, player) {
   const r = z.radius + PLAYER.radius + CONTACT_REACH;
   const dx = z.x - player.x;
   const dy = z.y - player.y;
-  if (dx * dx + dy * dy > r * r) return false;
+  return dx * dx + dy * dy <= r * r;
+}
+
+export function commitBite(z) {
   z.attackCd = CONTACT_COOLDOWN;
-  return true;
 }
 
 // --- XP orbs ----------------------------------------------------------------

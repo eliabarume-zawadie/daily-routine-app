@@ -168,6 +168,36 @@ Bites are tested at `radius + CONTACT_REACH` rather than strict overlap.
 Because bodies now rest at exactly the contact distance, a strict test sits
 permanently on the boundary and could stop registering hits altogether.
 
+### Attacker cap
+
+Once a ring can pin the player, uncapped contact damage makes encirclement an
+unavoidable instant kill: sixteen walkers land 128 damage against 100 health in
+a single frame, killing in 0.12 s with no escape.
+
+Damage throughput is therefore bounded by a **budget of `MAX_ATTACKERS` (3)
+bites per `CONTACT_COOLDOWN`**, refilled continuously and spent
+closest-zombie-first. A burst of up to three simultaneous bites is still
+allowed — being jumped by three at once should hurt — but sustained damage no
+longer scales with crowd size.
+
+Capping how many zombies may bite *in a single instant* does not work, and was
+measured failing: the nearest few change as bodies jostle, each newly-nearest
+zombie arrives with a fresh cooldown, and the ring rotates through the cap to
+land every bite anyway (16 walkers still killed in 0.33 s). Only bounding
+throughput fixes it.
+
+Measured time-to-death at point-blank encirclement:
+
+| Ring size | Before cap | After cap |
+|-----------|-----------|-----------|
+| 3         | 2.5 s     | 2.5 s     |
+| 8         | 0.73 s    | 2.1 s     |
+| 16        | 0.12 s    | 2.1 s     |
+| 24        | 0.18 s    | 2.1 s     |
+
+A lone attacker is unchanged; a crowd is lethal but leaves a window to shoot a
+gap open.
+
 ### Waves
 
 Two pressures compound: surviving longer (wave) and growing stronger (player

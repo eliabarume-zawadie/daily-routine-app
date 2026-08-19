@@ -58,6 +58,21 @@ export const HIT_FLASH = 0.12;          // seconds a zombie flashes after a hit
 // once bodies are touching exactly, a strict overlap test would never fire.
 export const CONTACT_REACH = 4;
 
+// How many zombies can be biting the player at once. Because a closed ring
+// pins the player, an uncapped crowd lands every attack together — 16 walkers
+// is 128 damage against 100 health, killing in 0.12s with no escape.
+//
+// This is enforced as a refilling budget of MAX_ATTACKERS bites per
+// CONTACT_COOLDOWN, spent closest-zombie-first, which bounds sustained damage
+// no matter how big the crowd is. Simply capping how many may bite in a single
+// instant does NOT work: the nearest few change as bodies jostle, and each
+// newly-nearest zombie arrives with a fresh cooldown, so the ring rotates
+// through the cap and lands every bite anyway.
+//
+// A burst of up to MAX_ATTACKERS simultaneous bites is still allowed — being
+// jumped by three at once should hurt.
+export const MAX_ATTACKERS = 3;
+
 // --- Waves ------------------------------------------------------------------
 
 export const WAVE = {

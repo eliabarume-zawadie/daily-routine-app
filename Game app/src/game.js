@@ -3,7 +3,7 @@
 
 import {
   STEP, MAX_STEPS, MAX_FRAME_DELTA, ARENA, COLORS, PLAYER, WEAPON, WAVE, XP,
-  SHAKE, UPGRADES,
+  SHAKE, UPGRADES, MAX_ATTACKERS, CONTACT_COOLDOWN,
 } from './config.js';
 // Note: nothing here forces `input.firing` off on a state change. The mouse
 // button is the browser's state to report, and clearing it here desynced the
@@ -14,7 +14,7 @@ import { initInput, takePressed, anyPressed, clearPressed } from './input.js';
 import {
   createPlayer, updatePlayer, tryFire, muzzlePoint,
   createBullet, updateBullet,
-  createZombie, updateZombie, hitZombie, zombieCanBite,
+  createZombie, updateZombie, hitZombie, zombieInBiteRange, commitBite,
   createOrb, updateOrb,
   emit, updateParticles, clearParticles,
 } from './entities.js';
@@ -55,6 +55,7 @@ export const game = {
   stacks: {},
   pendingLevels: 0,
   trauma: 0,
+  biteBudget: MAX_ATTACKERS,
 };
 
 export function addShake(amount) {
@@ -78,6 +79,7 @@ function startRun() {
   game.stacks = {};
   game.pendingLevels = 0;
   game.trauma = 0;
+  game.biteBudget = MAX_ATTACKERS;
   game.breather = 0;
 
   beginWave(1);
@@ -222,6 +224,9 @@ function killZombie(index) {
   swapPop(game.zombies, index);
 }
 
+// Reused across frames so the per-frame bite scan never allocates.
+const biters = [];
+
 function resolveCollisions() {
   const p = game.player;
 
@@ -246,11 +251,29 @@ function resolveCollisions() {
     }
   }
 
-  // Zombies against the player. Cooldown is per zombie, so a crowd hurts more
-  // than a single attacker.
+  // Zombies against the player. Cooldowns are per zombie, so a crowd still
+  // hurts more than a lone attacker — but only the closest MAX_ATTACKERS may
+  // strike at once. Uncapped, a ring lands every bite in the same frame and
+  // encirclement is an unavoidable instant kill instead of a fight to break
+  // out of.
+  biters.length = 0;
   for (let i = 0; i < game.zombies.length; i++) {
     const z = game.zombies[i];
-    if (!zombieCanBite(z, p)) continue;
+    if (zombieInBiteRange(z, p)) biters.push(z);
+  }
+
+  if (biters.length > 1) {
+    const d2 = (z) => (z.x - p.x) ** 2 + (z.y - p.y) ** 2;
+    biters.sort((a, b) => d2(a) - d2(b));   // closest zombies get first claim
+  }
+
+  for (let i = 0; i < biters.length; i++) {
+    const z = biters[i];
+    if (game.biteBudget < 1) break;         // crowd is already biting its fill
+    if (z.attackCd > 0) continue;
+
+    commitBite(z);
+    game.biteBudget -= 1;
 
     p.health -= z.damage;
     addShake(SHAKE.playerHit);
@@ -330,6 +353,11 @@ function update(dt) {
   const prevX = p.x;
   const prevY = p.y;
   updatePlayer(p, dt);
+  // Refills at exactly MAX_ATTACKERS bites per cooldown window.
+  game.biteBudget = Math.min(
+    MAX_ATTACKERS,
+    game.biteBudget + (MAX_ATTACKERS / CONTACT_COOLDOWN) * dt,
+  );
   resolvePlayerMovement(p, prevX, prevY);
 
   if (tryFire(p)) {

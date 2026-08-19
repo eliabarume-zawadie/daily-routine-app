@@ -75,6 +75,11 @@ src/
   encirclement impossible, because a closing ring squeezes the player straight
   out of it. Bites use `CONTACT_REACH` past the contact distance, since bodies
   now rest exactly on that boundary.
+- **Contact damage is throughput-capped, not instant-capped.** `game.biteBudget`
+  refills at `MAX_ATTACKERS` bites per `CONTACT_COOLDOWN`, spent
+  closest-zombie-first. Do not "simplify" this to a limit on how many zombies
+  may bite per frame — that was tried and measured failing, because the nearest
+  few change as bodies jostle and the ring rotates through the cap.
 - **No dependencies, no build step, no tooling files.** PRD section 6. If
   something seems to need a package, raise it before adding one.
 
