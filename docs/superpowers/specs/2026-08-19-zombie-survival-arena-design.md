@@ -14,7 +14,7 @@ playable game.
 
 ## Decisions
 
-Three choices were made up front; everything below follows from them.
+Four choices were made up front; everything below follows from them.
 
 1. **Full PRD scope, built incrementally.** All ten steps of PRD section 8,
    including the visual polish pass, delivered stage by stage with a playable
@@ -26,6 +26,11 @@ Three choices were made up front; everything below follows from them.
 3. **Neon noir art direction.** Near-black arena, cyan player, sickly-green
    zombies, hot-white tracers, magenta XP orbs, glow via canvas `shadowBlur`.
    Drawn entirely procedurally — no image assets, no external dependencies.
+4. **Keep it as simple as the PRD asks.** PRD section 8 says not to add
+   complexity before the core is stable, and section 6 says to avoid
+   dependencies. So: seven source modules, no build step, no package manager,
+   no test framework, and no file that does not earn its place. Ten files
+   total, including the HTML and CSS.
 
 ## Architecture
 
@@ -66,56 +71,45 @@ structurally impossible rather than guarded case by case.
 
 The arena is a fixed 1280×720 logical space, scaled uniformly to fit the window
 with letterboxing. Zombies spawn just outside the edges and walk in. There is
-no scrolling camera; the camera module exists only to apply screen shake.
+no scrolling camera; screen shake is applied as a translation at draw time.
 
 Rationale: for a wave-survival arena this is more readable than a scrolling
 world, and it reduces "responsive where practical" to one scale calculation.
 
-## Module layout
+## Files
 
 ```
 Game app/
-  index.html          canvas + DOM UI overlay
+  CLAUDE.md      guidance for working on this game
+  PRD.md         the product requirements
+  index.html     canvas + DOM UI overlay
   styles.css
-  package.json        no dependencies; { "type": "module" } so Node can test src/
-  README.md           how to run it
   src/
-    main.js           bootstrap, game loop, state machine, wiring
-    config.js         all tunables and the palette
-    input.js          keyboard + canvas-relative mouse coordinates
-    player.js         movement, health, weapon stats, firing
-    zombie.js         three types, chase + separation AI
-    bullet.js         projectile pool
-    collision.js      bullet/zombie, zombie/player, player/orb
-    waves.js          wave composition, spawn budget, difficulty curve
-    xp.js             orbs, magnetism, level curve
-    upgrades.js       pool, three-choice roll, stat application
-    particles.js      muzzle flash, blood, death burst, level-up ring
-    camera.js         trauma-based screen shake
-    render.js         world drawing
-    hud.js            live HUD updates
-    screens.js        start / pause / level-up / game-over
-    storage.js        localStorage high score, try/catch wrapped
-  test/
-    *.test.js         node --test over the DOM-free logic modules
+    config.js    every tunable: stats, curves, palette, upgrade definitions
+    input.js     keyboard state + canvas-relative mouse position
+    entities.js  player, zombies, bullets, XP orbs, particles
+    waves.js     spawn budget, type weights, difficulty scaling
+    game.js      state machine, loop, collisions, XP/levels, upgrade flow
+    render.js    all canvas drawing, including effects and screen shake
+    ui.js        DOM HUD, the four screens, high-score persistence
 ```
 
-Every tunable number lives in `config.js`. Balancing means changing numbers
-dozens of times; scattering them through logic files makes balance passes
-impractical.
+Ten files. No `package.json`, no build step, no test directory — nothing that
+exists only to support tooling.
 
-### Module contracts
+### What lives where
 
-- `config.js` — pure data. No imports, no DOM.
-- `waves.js` — given a wave number, returns spawn budget, type weights, spawn
-  interval, and stat scaling. No DOM.
-- `xp.js` — level curve and orb state. The curve function is pure. No DOM.
-- `upgrades.js` — owns the pool and stacking caps; `roll(taken)` returns three
-  non-maxed options; `apply(stats, id)` returns updated stats. No DOM.
-- `render.js`, `hud.js`, `screens.js` — the only modules that touch the DOM or
-  the canvas context.
-
-The four DOM-free modules are the testable core.
+- `config.js` — pure data, no imports. Every number that might be tuned during
+  balancing lives here so a balance pass touches one file.
+- `entities.js` — creation and per-frame update for each entity kind. They are
+  plain objects in flat arrays, not class hierarchies.
+- `waves.js` — pure functions from wave number to spawn budget, type weights,
+  spawn interval, and stat scaling.
+- `game.js` — owns the entity arrays and the state machine, runs the loop, and
+  resolves collisions and progression. The largest module; if it grows past
+  comfortable reading, waves/upgrade logic splits out first.
+- `render.js` and `ui.js` — the only modules that touch the canvas context or
+  the DOM.
 
 ## Gameplay
 
@@ -150,13 +144,14 @@ genuinely more dangerous than being chased by one.
 - Spawn interval: `max(0.25, 1.2 − 0.06 × (wave − 1))` seconds
 - HP scaling: `1 + 0.06 × (wave − 1)`
 - Speed scaling: `min(1.5, 1 + 0.02 × (wave − 1))`
+
 Spawn type is a weighted random draw, with the weights growing by wave so the
 mix shifts from all Walkers toward a Runner-and-Brute-heavy horde:
 
-| Type   | Weight                                    |
-|--------|-------------------------------------------|
-| Walker | `10`                                      |
-| Runner | `0` before wave 3, else `min(10, 2 + (wave − 3))` |
+| Type   | Weight                                                     |
+|--------|------------------------------------------------------------|
+| Walker | `10`                                                       |
+| Runner | `0` before wave 3, else `min(10, 2 + (wave − 3))`          |
 | Brute  | `0` before wave 6, else `min(6, 1 + floor((wave − 6) / 2))` |
 
 A wave clears when its budget is spent and no zombies remain alive. A 3 s
@@ -222,7 +217,8 @@ pauses, `1`/`2`/`3` picks an upgrade, `R` restarts from game over.
 
 - Fixed timestep with a step cap, as above.
 - Auto-pause on window blur, so returning to the tab is never a free death.
-- Object pooling for bullets and particles, avoiding mid-fight GC stutter.
+- Bullets and particles are reused from fixed-size pools, avoiding mid-fight
+  garbage-collection stutter.
 - `localStorage` access wrapped in try/catch — it throws outright in some
   private-browsing modes. A failure silently disables high-score persistence
   rather than breaking the game.
@@ -231,18 +227,23 @@ pauses, `1`/`2`/`3` picks an upgrade, `R` restarts from game over.
 
 ## Verification
 
-No test framework and no dependencies, per PRD section 6.
+No test framework and no dependencies, per PRD section 6, and no tooling files,
+per the simplicity decision above. Verification is functional, which is what
+PRD section 8 asks for: before each major feature, confirm the existing game
+still works.
 
-**Automated:** `node --test` over `test/*.test.js`, covering the DOM-free
-logic — level curve monotonicity, upgrade stacking caps and stat math, wave
-budget and interval curves, and type-weight selection. This uses only Node's
-built-in test runner.
+At every stage checkpoint, run this smoke checklist in the browser:
 
-**Manual:** a written smoke checklist run at every stage checkpoint, per PRD
-section 8's requirement to verify the existing game still works before adding
-each major feature. The checklist covers: no console errors, movement and aim
-responsiveness, shooting and kills, wave advance, level-up and upgrade
-application, game over and restart, and high-score persistence across reload.
+1. Console is free of errors and warnings.
+2. Movement responds immediately in all eight directions and the player cannot
+   leave the arena.
+3. Aim tracks the cursor; firing produces bullets that travel and expire.
+4. Zombies spawn, chase, take damage, and die. (Stage 2 onward.)
+5. A wave clears and the next begins. (Stage 3 onward.)
+6. Level-up appears, an upgrade applies, and its effect is observable.
+   (Stage 4 onward.)
+7. Death shows game over; restart returns to a clean run with reset stats.
+8. High score survives a page reload. (Stage 5.)
 
 ## Build stages
 
@@ -250,7 +251,7 @@ Each stage ends playable.
 
 | Stage | Delivers | PRD steps |
 |-------|----------|-----------|
-| 1 | Project skeleton, loop, arena, player movement, mouse aim, shooting | 1–3 |
+| 1 | Skeleton, loop, arena, player movement, mouse aim, shooting | 1–3 |
 | 2 | Zombies, chase AI, collision, damage, health, game over, restart | 4, 5, 9 |
 | 3 | XP orbs, levels, score, waves | 6, 7 |
 | 4 | Level-up screen and the six upgrades | 8 |
