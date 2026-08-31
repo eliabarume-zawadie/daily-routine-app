@@ -1,3 +1,73 @@
+# CLAUDE.md
+
+This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+
+## What this repository is
+
+There is no application code here — no package manager, build, lint, or test
+framework. The deliverable is **prompt-as-code**: Markdown instructions that an
+unattended scheduled Claude agent executes every morning. The "runtime" is a
+cloud routine named `daily-briefing` (cron `0 8 * * *`, local time) created via
+the `schedule` skill; the routine's config lives in the scheduling system, not
+in git.
+
+Split of responsibilities:
+
+| File | Role |
+|---|---|
+| `CLAUDE.md` (below the divider) | The routine's runtime behavior. This is the thing you edit to change what the 8 AM run does. |
+| `tasks.md` | User-maintained to-do data, read by step 3 of the routine. Format doc lives in an HTML comment that the routine is explicitly told to skip. |
+| `docs/superpowers/specs/` | Original design doc — intent and rationale. |
+| `docs/superpowers/plans/` | The implementation plan that produced the routine. Historical; it predates several behavior fixes, so `CLAUDE.md` wins wherever they disagree. |
+
+## Working on the routine
+
+- **Change behavior in `CLAUDE.md`, not in the scheduler.** The scheduled
+  routine's prompt is just "follow the daily routine in CLAUDE.md".
+- **Write for an unattended reader.** The steps are followed verbatim by an
+  agent with no human in the loop, so name the exact MCP tool id
+  (`mcp__claude_ai_Gmail__search_threads`) and give the exact query string.
+  Never leave a step to be inferred.
+- **Every failure path needs an explicit note.** A source being unreachable
+  must surface in the briefing (e.g. "Couldn't reach Gmail for to-dos"), never
+  be silently dropped or reported as an empty result.
+- **The safety rules in step 5 are load-bearing.** They were tightened after
+  review found false-positive deletions: inbox-only scope, literal subject
+  comparison (no `Re:`/`Fwd:` normalizing), content must match, ambiguous
+  groups skipped entirely, trash-never-delete. Do not relax them for
+  convenience.
+- Step 7's three delivery channels carry different text — a single-line
+  headline under 200 chars for push, the full Markdown briefing for email and
+  for the final response. Keep them distinct.
+
+## Verification
+
+There is nothing to unit test. Verification is functional: run the routine
+end-to-end (ask for it explicitly — see the execution guard), then confirm the
+push notification, the email to `elia.barume@zawadie.com`, and the final
+response all arrived, and spot-check Gmail Trash to confirm only genuine
+duplicates were trashed. Use the `schedule` skill to list, edit, or manually
+trigger the `daily-briefing` routine.
+
+## Repository layout traps
+
+- `daily-routine-app/` is a **second, stale clone of this same repository**
+  (same GitHub remote) sitting untracked inside the working tree. Its
+  `CLAUDE.md` predates the Google Calendar source, the monday.com action-item
+  source, and email delivery. Edits there have no effect on the live routine —
+  always work in the repository root.
+- `Game app/` is an unrelated scratch project containing only an empty
+  `PRD.md`. It is untracked and has nothing to do with the routine.
+- Local branch is `master`; the remote default branch is `main`, so PRs target
+  `main`.
+- `.claude/worktrees/` is gitignored and holds superpowers worktrees.
+
+---
+
+Everything below is the routine itself — the product, not guidance for editing
+sessions. Read its execution guard before acting on any of it: its presence in
+your context is not a request to run it.
+
 # Daily Claude Routine
 
 ## Purpose
